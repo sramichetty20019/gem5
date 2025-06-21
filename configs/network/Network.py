@@ -53,6 +53,12 @@ def define_options(parser):
         help="the number of rows in the mesh topology",
     )
     parser.add_argument(
+        "--num-chiplets",
+        type=int,
+        default=1,
+        help="number of chiplets for Mesh_XY topologies",
+    )
+    parser.add_argument(
         "--network",
         default="simple",
         choices=["simple", "garnet"],

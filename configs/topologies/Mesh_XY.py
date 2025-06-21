@@ -30,6 +30,7 @@ from topologies.BaseTopology import SimpleTopology
 
 from m5.objects import *
 from m5.params import *
+import math
 
 # Creates a generic Mesh assuming an equal number of cache
 # and directory controllers.
@@ -50,7 +51,26 @@ class Mesh_XY(SimpleTopology):
         nodes = self.nodes
 
         num_routers = options.num_cpus
-        num_rows = options.mesh_rows
+        num_rows_per_chiplet = options.mesh_rows
+
+        num_chiplets = getattr(options, "num_chiplets", 1)
+        assert num_chiplets > 0
+        chiplets_x = int(math.sqrt(num_chiplets))
+        chiplets_y = int(math.sqrt(num_chiplets))
+        assert chiplets_x * chiplets_y == num_chiplets, (
+            "num_chiplets must be a perfect square"
+        )
+
+        routers_per_chiplet, rem = divmod(num_routers, num_chiplets)
+        assert rem == 0, "num_cpus must be divisible by num_chiplets"
+        num_columns_per_chiplet = int(routers_per_chiplet / num_rows_per_chiplet)
+        assert (
+            num_columns_per_chiplet * num_rows_per_chiplet == routers_per_chiplet
+        )
+
+        num_rows = num_rows_per_chiplet * chiplets_y
+        num_columns = num_columns_per_chiplet * chiplets_x
+        assert num_columns * num_rows == num_routers
 
         # default values for link latency and router latency.
         # Can be over-ridden on a per link/router basis
@@ -61,8 +81,6 @@ class Mesh_XY(SimpleTopology):
         # Also, obviously the number or rows must be <= the number of routers
         cntrls_per_router, remainder = divmod(len(nodes), num_routers)
         assert num_rows > 0 and num_rows <= num_routers
-        num_columns = int(num_routers / num_rows)
-        assert num_columns * num_rows == num_routers
 
         # Create the routers in the mesh
         routers = [
